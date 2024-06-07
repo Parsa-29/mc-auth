@@ -1,0 +1,52 @@
+# Auth plugin for Minecraft by Khvicha Parsadanasvili
+# Auth configuration file
+
+# The number of failed login attempts before the player is kicked
+MaxAttempts: 3
+
+# The minimum length of the password
+MinPasswordLength: 6
+
+# The time in seconds before the player is kicked
+KickTime: 15
+
+# Plugin prefix
+Prefix: "§9[§bAuth§9]§c "
+
+# Messages
+Translate:
+  loginUsage: "§cUsage: /login <password>"
+  registerUsage: "§cUsage: /register <password> <confirmPassword>"
+  mustLogin: "§6You must log in using /login <password> before you can play."
+  mustRegister: "§6You must register using /register <password> <confirmPassword> before you can play."
+  passwordLength: "§cPassword must be at least %minLength% characters long!"
+  loginSuccess: "§aYou have successfully logged in!"
+  registerSuccess: "§aYou have successfully registered!"
+  loginFail: "§cIncorrect password!"
+  incorrectPassword: "§cIncorrect password! Attempt %attempt% of %maxAttempts%."
+  registerFail: "§cPasswords do not match!"
+  loginError: "§cAn error occurred while logging in!"
+  registerError: "§cAn error occurred while registering!"
+  alreadyLoggedIn: "§cYou are already logged in!"
+  alreadyRegistered: "§cYou are already registered!"
+  notRegistered: "§cYou are not registered!"
+  notLoggedIn: "§cYou are not logged in!"
+  ipMismatch: "§cIP address does not match! \nIf you want to change your IP address, please contact an admin."
+  tooManyAttempts: "§cYou have been kicked for too many failed login attempts!"
+  userNotFound: "§cUser not found!"
+  bePlayer: "§cYou must be a player to use this command!"
+  encryptionError: "§cAn error occurred during encryption!"
+  securityUsage: "§cUsage: /security <on/off>"
+  securityEnabled: "§aIP security has been enabled!"
+  securityDisabled: "§aIP security has been disabled!"
+  errorOccurred: "§cAn error occurred while reading the user data!"
+  cannotMove: "§cYou cannot move until you log in."
+  cannotBreak: "§cYou cannot break blocks until you log in."
+  cannotPickup: "§cYou cannot pick up items until you log in."
+  cannotCommand: "§cYou must log in or register first!"
+  kickMessage: "§cYou were kicked for not logging in or registering within %kickTime% seconds."
+  noPermission: "§cYou do not have permission to use this command!"
+  passwordChanged: "§aPassword changed successfully!"
+  passwordsDoNotMatch: "§cNew passwords do not match!"
+  incorrectPasswordChange: "§cCurrent password is incorrect!"
+  changePassUsage: "§cUsage: /changepass <oldPassword> <newPassword> <confirmPassword>"

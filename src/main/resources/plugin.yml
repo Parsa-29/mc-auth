@@ -1,0 +1,27 @@
+name: auth
+main: com.mcgeo.auth.Plugin
+version: 0.0.2
+api-version: 1.15
+description: Auth plugin for Minecraft
+authors: ["Khvicha Parsadanasvili"]
+commands:
+  register:
+    description: Register a new account
+    usage: /<command> <password> <confirmPassword>
+    aliases: [r, reg]
+  login:
+    description: Login to your account
+    usage: /<command> <password>
+    aliases: [l, log]
+  security:
+    description: Turn on/off security IP protection
+    usage: /<command> <on/off>
+    aliases: [sec]
+  config:
+    description: Change the configuration of the plugin
+    usage: /<command>
+    aliases: [c, cfg]
+  changepass:
+    description: Change your password
+    usage: /<command> <oldPassword> <newPassword> <confirmPassword>
+    aliases: [cp, chp]
