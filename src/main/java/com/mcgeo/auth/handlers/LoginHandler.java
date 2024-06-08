@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +73,12 @@ public class LoginHandler implements CommandExecutor {
                                 player.sendMessage(
                                         SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("loginSuccess"));
                                 user.setActive(true);
+
+                                // update last join
+                                String timeStamp = new SimpleDateFormat("yyyy/MM/dd_HH:mm:ss")
+                                        .format(Calendar.getInstance().getTime());
+                                user.setLastJoin(timeStamp);
+                                
                                 // Save the updated user list
                                 saveUsers.saveUsers(users);
                                 failedAttempts.remove(username); // Reset failed attempts on successful login

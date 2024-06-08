@@ -25,3 +25,7 @@ commands:
     description: Change your password
     usage: /<command> <oldPassword> <newPassword> <confirmPassword>
     aliases: [cp, chp]
+  userdata:
+    description: Get user data
+    usage: /<command> <player>
+    aliases: [ud, data]

@@ -1,10 +1,14 @@
 package com.mcgeo.auth;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.logging.Logger;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.mcgeo.auth.handlers.RegisterHandler;
 import com.mcgeo.auth.handlers.SecurityHandler;
+import com.mcgeo.auth.handlers.UserdataHandler;
 import com.mcgeo.auth.listeners.PlayerListener;
 import com.mcgeo.auth.utils.SettingsUtil;
 import com.mcgeo.auth.handlers.ChangePassHandler;
@@ -30,6 +34,7 @@ public class Plugin extends JavaPlugin {
     getCommand("security").setExecutor(new SecurityHandler(this));
     getCommand("config").setExecutor(new ConfigHandler(this));
     getCommand("changepass").setExecutor(new ChangePassHandler(this));
+    getCommand("userdata").setExecutor(new UserdataHandler(this));
     getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
     getServer().getPluginManager().registerEvents(new SettingsUtil(this), this);
   }

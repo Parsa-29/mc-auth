@@ -2,10 +2,12 @@ package com.mcgeo.auth.handlers;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Calendar;
 import java.util.List;
 import java.util.UUID;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -23,6 +25,7 @@ public class RegisterHandler implements CommandExecutor {
     private File dataFile;
     Plugin plugin;
     SaveUsers saveUsers;
+
     public RegisterHandler(Plugin plugin) {
         this.plugin = plugin; // Assign plugin
         this.dataFile = new File(plugin.getDataFolder(), "data.json");
@@ -80,6 +83,9 @@ public class RegisterHandler implements CommandExecutor {
                 ipAddress = socket.getLocalAddress().toString().substring(1);
                 String hashedIp = EncryptionUtils.hashSHA256(ipAddress);
                 socket.close();
+
+                String timeStamp = new SimpleDateFormat("yyyy/MM/dd_HH:mm:ss").format(Calendar.getInstance().getTime());
+
                 // Create new user
                 UUID uuid = player.getUniqueId();
                 User newUser = new User(
@@ -88,7 +94,9 @@ public class RegisterHandler implements CommandExecutor {
                         hashedPassword,
                         true,
                         hashedIp,
-                        false);
+                        false,
+                        timeStamp,
+                        timeStamp);
 
                 // Add new user to the list
                 users.add(newUser);

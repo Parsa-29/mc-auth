@@ -50,3 +50,6 @@ Translate:
   passwordsDoNotMatch: "§cNew passwords do not match!"
   incorrectPasswordChange: "§cCurrent password is incorrect!"
   changePassUsage: "§cUsage: /changepass <oldPassword> <newPassword> <confirmPassword>"
+  changePassUsageOP: "§cUsage: /changepass <player> <newPassword> <confirmPassword>"
+  userData: "§cUser data:"
+  userDataUsage: "§cUsage: /userdata <player>"
