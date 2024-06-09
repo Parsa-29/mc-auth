@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.UUID;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.sql.Date;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 
 import org.bukkit.command.Command;
@@ -89,7 +91,7 @@ public class RegisterHandler implements CommandExecutor {
                 String hashedIp = EncryptionUtils.hashSHA256(ipAddress);
                 socket.close();
 
-                String timeStamp = new SimpleDateFormat("yyyy/MM/dd_HH:mm:ss").format(Calendar.getInstance().getTime());
+                Timestamp timeStamp = new Timestamp(System.currentTimeMillis());
 
                 // Create new user
                 UUID uuid = player.getUniqueId();

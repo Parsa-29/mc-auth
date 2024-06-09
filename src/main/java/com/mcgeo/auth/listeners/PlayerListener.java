@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,7 +13,11 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -22,6 +27,7 @@ import com.mcgeo.auth.db.Database;
 import com.mcgeo.auth.models.SessionHandler;
 import com.mcgeo.auth.models.User;
 import com.mcgeo.auth.utils.EncryptionUtils;
+import com.mcgeo.auth.utils.SessionManager;
 import com.mcgeo.auth.utils.SettingsUtil;
 import com.mcgeo.auth.utils.UserList;
 
@@ -31,12 +37,13 @@ public class PlayerListener implements Listener {
     private Database database;
     private UserList userList;
     private SessionHandler sessionHandler;
+    private SessionManager sessionManager;
 
     public PlayerListener(Plugin plugin) {
         this.plugin = plugin;
         this.database = plugin.getDatabase();
         this.userList = new UserList(plugin, database);
-
+        this.sessionManager = sessionManager;
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -69,7 +76,7 @@ public class PlayerListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
+    public void onPlayerJoin(PlayerJoinEvent event) throws Exception {
         Player player = event.getPlayer();
         String username = player.getName();
         List<User> users;
@@ -94,6 +101,27 @@ public class PlayerListener implements Listener {
                         plugin.getLogger().warning("Error getting IP address: " + e.getMessage());
                     }
                 }
+
+                // if user is not active, and last join is less than 5 minutes ago, set user to
+                // active and update database
+                Timestamp lastJoin = user.getLastJoin();
+                Timestamp currentTime = new Timestamp(System.currentTimeMillis());
+                long diff = currentTime.getTime() - lastJoin.getTime();
+                Long diffMinutes = diff / (60 * 1000) % 60;
+
+                if (!user.isActive() && diffMinutes < 5) {
+                    String playerIp = EncryptionUtils.hashSHA256(getCurrentIpAddress());
+                    if (playerIp.equals(user.getIpAddress())) {
+
+                        user.setActive(true);
+                        database.updateUser(user);
+
+                        SessionHandler session = new SessionHandler(player, user);
+                        plugin.getSessionManager().addSession(player, session);
+                        player.sendMessage(
+                                SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("loginSuccess"));
+                    }
+                }
             }
             new BukkitRunnable() {
                 @Override
@@ -107,16 +135,67 @@ public class PlayerListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
+    public void onPlayerQuit(PlayerQuitEvent event) throws IOException, SQLException {
         Player player = event.getPlayer();
         String username = player.getName();
-        User user = sessionHandler.getUser();
 
-        if (user.getUsername().equals(username) && user.isActive()) {
-            user.setActive(false);
-            database.updateUser(user); // Update user status in the database
+        //on player quit, cancel the kick task and if the player is active, set them to inactive
+        if (isActive(player)) {
+            List<User> users;
+            try {
+                users = userList.readUsers();
+                for (User user : users) {
+                    if (user.getUsername().equals(username)) {
+                        user.setActive(false);
+                        database.updateUser(user);
+                        break;
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         cancelKickTask(username);
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) throws IOException, SQLException {
+        Player player = event.getPlayer();
+        if (!isActive(player)) {
+            event.setCancelled(true);
+            player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("cannotMove"));
+        }
+    }
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) throws IOException, SQLException {
+        Player player = event.getPlayer();
+        if (!isActive(player)) {
+            event.setCancelled(true);
+            player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("cannotBreak"));
+        }
+    }
+
+    @EventHandler
+    public void onEntityPickupItem(EntityPickupItemEvent event) throws IOException, SQLException {
+        if (event.getEntity() instanceof Player) {
+            Player player = (Player) event.getEntity();
+            if (!isActive(player)) {
+                event.setCancelled(true);
+                player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("cannotPickup"));
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event) throws IOException, SQLException {
+        Player player = event.getPlayer();
+        String message = event.getMessage().toLowerCase();
+
+        if (!isActive(player) && !message.startsWith("/login") && !message.startsWith("/register")) {
+            event.setCancelled(true);
+            player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("cannotCommand"));
+        }
     }
 
     private void scheduleKickTask(String playerName) {
@@ -147,7 +226,6 @@ public class PlayerListener implements Listener {
     private boolean isActive(Player player) throws IOException, SQLException {
         String username = player.getName();
         List<User> users = userList.readUsers();
-
         for (User user : users) {
             if (user.getUsername().equals(username)) {
                 return user.isActive();

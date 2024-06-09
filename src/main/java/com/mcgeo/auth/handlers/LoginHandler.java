@@ -4,8 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +22,6 @@ import com.mcgeo.auth.utils.EncryptionUtils;
 import com.mcgeo.auth.utils.SaveUsers;
 import com.mcgeo.auth.utils.SettingsUtil;
 import com.mcgeo.auth.utils.UserList;
-import com.mysql.cj.Session;
 
 public class LoginHandler implements CommandExecutor {
     private Map<String, Integer> failedAttempts = new HashMap<>();
@@ -96,8 +94,7 @@ public class LoginHandler implements CommandExecutor {
                             SessionHandler session = new SessionHandler(player, user);
                             plugin.getSessionManager().addSession(player, session);
 
-                            String timeStamp = new SimpleDateFormat("yyyy/MM/dd_HH:mm:ss")
-                                    .format(Calendar.getInstance().getTime());
+                            Timestamp timeStamp = new Timestamp(System.currentTimeMillis());
                             user.setLastJoin(timeStamp);
 
                             // Update user's data in the database

@@ -2,7 +2,9 @@ package com.mcgeo.auth.db;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -11,7 +13,6 @@ import com.mcgeo.auth.models.User;
 
 public class Database {
     private Connection connection;
-    @SuppressWarnings("unused")
     private Plugin plugin;
     private FileConfiguration config;
     private static final Logger logger = Logger.getLogger(Database.class.getName());
@@ -54,8 +55,10 @@ public class Database {
             }
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "[auth] Failed to connect to the database.", e);
+            throw new SQLException(e);
         } catch (ClassNotFoundException e) {
             logger.log(Level.SEVERE, "[auth] JDBC Driver not found.", e);
+            throw new SQLException(e);
         }
     }
 
@@ -66,7 +69,7 @@ public class Database {
             pstmt.setObject(1, user.getPassword());
             pstmt.setBoolean(2, user.isActive());
             pstmt.setBoolean(3, user.isSecurity());
-            pstmt.setString(4, user.getLastJoin());
+            pstmt.setTimestamp(4, user.getLastJoin() != null ? new Timestamp(user.getLastJoin().getTime()) : null);
             pstmt.setString(5, user.getUsername());
             pstmt.executeUpdate();
             logger.log(Level.INFO, "[auth] User '" + user.getUsername() + "' updated successfully.");
@@ -102,14 +105,27 @@ public class Database {
                 + "ipAddress VARCHAR(255), "
                 + "isActive BOOLEAN, "
                 + "security BOOLEAN, "
-                + "createdAt VARCHAR(255), "
-                + "lastJoin VARCHAR(255))";
+                + "createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+                + "lastJoin TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)";
         try (Connection conn = getConnection();
                 java.sql.Statement stmt = conn.createStatement()) {
+            logger.log(Level.INFO, "[auth] Attempting to create table 'users'.");
             stmt.executeUpdate(query);
             logger.log(Level.INFO, "[auth] Table 'users' created or already exists.");
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "[auth] Failed to create table 'users'.", e);
+        }
+    }
+
+    public boolean isTableExists() {
+        String query = "SHOW TABLES LIKE 'users'";
+        try (Connection conn = getConnection();
+                java.sql.Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(query)) {
+            return rs.next();
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "[auth] Error checking if table 'users' exists.", e);
+            return false;
         }
     }
 }

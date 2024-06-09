@@ -1,5 +1,7 @@
 package com.mcgeo.auth.models;
 
+import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -13,11 +15,11 @@ public class User {
     private boolean isActive;
     private String ipAddress;
     private boolean security;
-    private String createdAt;
-    private String lastJoin;
+    private Timestamp createdAt;
+    private Timestamp lastJoin;
 
     public User(UUID uuid, String username, String password, boolean isActive, String ipAddress, boolean security,
-            String timeStamp, String timeStamp2) {
+            Timestamp timeStamp, Timestamp timeStamp2) {
         this.uuid = uuid;
         this.username = username;
         this.password = password;
@@ -66,19 +68,19 @@ public class User {
         this.isActive = isActive;
     }
 
-    public String getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public String getLastJoin() {
+    public Timestamp getLastJoin() {
         return lastJoin;
     }
 
-    public void setCreatedAt(String createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
 
-    public void setLastJoin(String lastJoin) {
+    public void setLastJoin(Timestamp lastJoin) {
         this.lastJoin = lastJoin;
     }
 

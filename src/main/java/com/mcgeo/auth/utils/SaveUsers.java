@@ -55,8 +55,8 @@ public class SaveUsers {
                 pstmt.setString(4, user.getIpAddress());
                 pstmt.setBoolean(5, user.isActive());
                 pstmt.setBoolean(6, user.isSecurity());
-                pstmt.setString(7, user.getCreatedAt());
-                pstmt.setString(8, user.getLastJoin());
+                pstmt.setTimestamp(7, user.getCreatedAt());
+                pstmt.setTimestamp(8, user.getLastJoin());
                 pstmt.addBatch();
             }
             pstmt.executeBatch();

@@ -15,58 +15,59 @@ import com.mcgeo.auth.handlers.ChangePassHandler;
 import com.mcgeo.auth.handlers.ConfigHandler;
 import com.mcgeo.auth.handlers.LoginHandler;
 
-/*
- * auth java plugin
- */
 public class Plugin extends JavaPlugin {
-  public static final Logger LOGGER = Logger.getLogger("auth");
-  private SettingsUtil settingsUtil;
-  private Database database;
-  private SessionManager sessionManager;
+    public static final Logger LOGGER = Logger.getLogger("auth");
+    private SettingsUtil settingsUtil;
+    private Database database;
+    private SessionManager sessionManager;
 
-  @Override
-  public void onEnable() {
-    LOGGER.info("auth enabled");
+    @Override
+    public void onEnable() {
+        LOGGER.info("auth enabled");
 
-    saveDefaultConfig();
+        saveDefaultConfig();
 
-    settingsUtil = new SettingsUtil(this);
-    settingsUtil.reloadSettings();
+        settingsUtil = new SettingsUtil(this);
+        settingsUtil.reloadSettings();
 
-    sessionManager = new SessionManager();
+        sessionManager = new SessionManager();
 
-    database = new Database(this);
-    try {
-      database.openConnection();
-    } catch (SQLException e) {
-      e.printStackTrace();
+        database = new Database(this);
+        try {
+            database.openConnection();
+            database.createTable();
+            if (database.isTableExists()) {
+                LOGGER.info("[auth] Table 'users' exists.");
+            } else {
+                LOGGER.severe("[auth] Table 'users' does not exist after creation attempt.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        getCommand("register").setExecutor(new RegisterHandler(this));
+        getCommand("login").setExecutor(new LoginHandler(this));
+        getCommand("security").setExecutor(new SecurityHandler(this));
+        getCommand("config").setExecutor(new ConfigHandler(this));
+        getCommand("changepass").setExecutor(new ChangePassHandler(this));
+        getCommand("userdata").setExecutor(new UserdataHandler(this));
+        getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
+        getServer().getPluginManager().registerEvents(new SettingsUtil(this), this);
     }
-    database.createTable(); // Call to create the table
 
-    getCommand("register").setExecutor(new RegisterHandler(this));
-    getCommand("login").setExecutor(new LoginHandler(this));
-    getCommand("security").setExecutor(new SecurityHandler(this));
-    getCommand("config").setExecutor(new ConfigHandler(this));
-    getCommand("changepass").setExecutor(new ChangePassHandler(this));
-    getCommand("userdata").setExecutor(new UserdataHandler(this));
-    getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
-    getServer().getPluginManager().registerEvents(new SettingsUtil(this), this);
-  }
-
-  @Override
-  public void onDisable() {
-    LOGGER.info("auth disabled");
-    if (database != null) {
-      database.closeConnection();
+    @Override
+    public void onDisable() {
+        LOGGER.info("auth disabled");
+        if (database != null) {
+            database.closeConnection();
+        }
     }
-  }
 
-  public Database getDatabase() {
-    return database;
-  }
+    public Database getDatabase() {
+        return database;
+    }
 
-  public SessionManager getSessionManager() {
-    return sessionManager;
-  }
-
+    public SessionManager getSessionManager() {
+        return sessionManager;
+    }
 }

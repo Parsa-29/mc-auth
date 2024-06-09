@@ -65,8 +65,8 @@ public class UserList {
                         rs.getBoolean("isActive"),
                         rs.getString("ipAddress"),
                         rs.getBoolean("security"),
-                        rs.getString("createdAt"),
-                        rs.getString("lastJoin"));
+                        rs.getTimestamp("createdAt"),
+                        rs.getTimestamp("lastJoin"));
                 users.add(user);
             }
         } catch (SQLException e) {

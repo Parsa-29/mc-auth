@@ -13,7 +13,6 @@ import com.mcgeo.auth.utils.SaveUsers;
 import com.mcgeo.auth.utils.SettingsUtil;
 
 import java.io.File;
-import java.io.IOException;
 
 public class SecurityHandler implements CommandExecutor {
     private Plugin plugin;
