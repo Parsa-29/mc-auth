@@ -1,5 +1,6 @@
 package com.mcgeo.auth.handlers;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.bukkit.command.Command;
@@ -8,7 +9,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.mcgeo.auth.Plugin;
-import com.mcgeo.auth.classes.User;
+import com.mcgeo.auth.db.Database;
+import com.mcgeo.auth.models.User;
 import com.mcgeo.auth.utils.SaveUsers;
 import com.mcgeo.auth.utils.SettingsUtil;
 import com.mcgeo.auth.utils.UserList;
@@ -16,9 +18,14 @@ import com.mcgeo.auth.utils.UserList;
 public class UserdataHandler implements CommandExecutor {
     Plugin plugin;
     SaveUsers saveUsers;
+    private UserList userList;
 
     public UserdataHandler(Plugin plugin) {
         this.plugin = plugin; // Assign plugin
+        Database database = plugin.getDatabase(); // Ensure this method exists in your Plugin class
+        File dataFile = new File(plugin.getDataFolder(), "data.json");
+        this.saveUsers = new SaveUsers(dataFile, database);
+        this.userList = new UserList(plugin, database); // Updated to match constructor
     }
 
     @Override
@@ -33,13 +40,13 @@ public class UserdataHandler implements CommandExecutor {
                     player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("userDataUsage"));
                     return true;
                 }
-                UserList userList = new UserList(plugin);
                 try {
                     userList.readUsers();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                User user = userList.getUser(username);
+                User user = null;
+                user = userList.getUser(username);
                 if (user != null) {
                     player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("userData"));
                     player.sendMessage("§7====================================");

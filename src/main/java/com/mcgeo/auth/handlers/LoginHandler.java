@@ -16,92 +16,115 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.mcgeo.auth.Plugin;
-import com.mcgeo.auth.classes.User;
+import com.mcgeo.auth.db.Database;
+import com.mcgeo.auth.models.SessionHandler;
+import com.mcgeo.auth.models.User;
 import com.mcgeo.auth.utils.EncryptionUtils;
 import com.mcgeo.auth.utils.SaveUsers;
 import com.mcgeo.auth.utils.SettingsUtil;
 import com.mcgeo.auth.utils.UserList;
+import com.mysql.cj.Session;
 
 public class LoginHandler implements CommandExecutor {
     private Map<String, Integer> failedAttempts = new HashMap<>();
     Plugin plugin;
     SaveUsers saveUsers;
+    private UserList userList;
+    private Database database;
 
     public LoginHandler(Plugin plugin) {
-        this.plugin = plugin; // Assign plugin
-        this.saveUsers = new SaveUsers(new File(plugin.getDataFolder(), "data.json"));
+        this.plugin = plugin;
+        this.database = plugin.getDatabase(); // Initialize the database
+        File dataFile = new File(plugin.getDataFolder(), "data.json");
+        this.saveUsers = new SaveUsers(dataFile, database);
+        this.userList = new UserList(plugin, database); // Updated to match constructor
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (command.getName().equalsIgnoreCase("login") && sender instanceof Player) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("bePlayer"));
+            return true;
+        }
 
+        Player player = (Player) sender;
+
+        if (command.getName().equalsIgnoreCase("login")) {
             if (args.length < 1) {
-                sender.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("loginUsage"));
+                player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("loginUsage"));
                 return true;
             }
 
-            Player player = (Player) sender;
             String username = player.getName();
             String passwordArgs = args[0];
-            List<User> users;
+
             try {
-                users = new UserList(plugin).readUsers();
+                List<User> users = userList.readUsers();
+
                 for (User user : users) {
                     if (user.getUsername().equals(username)) {
-                        try {
+                        if (user.isActive()) {
+                            player.sendMessage(
+                                    SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("alreadyLoggedIn"));
+                            return true;
+                        }
 
-                            if (user.isActive()) {
-                                player.sendMessage(
-                                        SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("alreadyLoggedIn"));
+                        // Check IP if security is enabled
+                        if (user.isSecurity()) {
+                            String playerIp = null;
+                            try {
+                                playerIp = EncryptionUtils.hashSHA256(getCurrentIpAddress());
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            if (!user.getIpAddress().equals(playerIp)) {
+                                String message = SettingsUtil.TRANSLATED_STRINGS.get("ipMismatch");
+                                player.sendMessage(SettingsUtil.PREFIX + message);
                                 return true;
                             }
-                            // Check IP if security is enabled
-                            if (user.isSecurity()) {
-                                String playerIp = EncryptionUtils.hashSHA256(getCurrentIpAddress());
-                                if (!user.getIpAddress().equals(playerIp)) {
-                                    String message = SettingsUtil.TRANSLATED_STRINGS.get("ipMismatch");
-                                    player.sendMessage(SettingsUtil.PREFIX + message);
-                                    return true;
-                                }
-                            }
-                            // Hash the provided password
-                            String hashedInputPassword = EncryptionUtils.hashSHA256(passwordArgs);
+                        }
 
-                            // Compare hashed passwords
-                            if (user.getPassword().equals(hashedInputPassword)) {
-                                player.sendMessage(
-                                        SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("loginSuccess"));
-                                user.setActive(true);
+                        // Hash the provided password
+                        String hashedInputPassword = EncryptionUtils.hashSHA256(passwordArgs);
 
-                                // update last join
-                                String timeStamp = new SimpleDateFormat("yyyy/MM/dd_HH:mm:ss")
-                                        .format(Calendar.getInstance().getTime());
-                                user.setLastJoin(timeStamp);
-                                
-                                // Save the updated user list
-                                saveUsers.saveUsers(users);
-                                failedAttempts.remove(username); // Reset failed attempts on successful login
-                                return true;
-                            } else {
-                                handleFailedAttempt(player);
-                                return true;
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("loginError"));
+                        // Compare hashed passwords
+                        if (user.getPassword().equals(hashedInputPassword)) {
+                            // Login successful, update user's status and last join timestamp
+                            user.setActive(true);
+
+                            // Create a session for the user
+                            SessionHandler session = new SessionHandler(player, user);
+                            plugin.getSessionManager().addSession(player, session);
+
+                            String timeStamp = new SimpleDateFormat("yyyy/MM/dd_HH:mm:ss")
+                                    .format(Calendar.getInstance().getTime());
+                            user.setLastJoin(timeStamp);
+
+                            // Update user's data in the database
+                            database.updateUser(user);
+
+                            failedAttempts.remove(username); // Reset failed attempts on successful login
+
+                            player.sendMessage(
+                                    SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("loginSuccess"));
+                            return true;
+                        } else {
+                            handleFailedAttempt(player);
                             return true;
                         }
                     }
                 }
+
+                // User not found
+                player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("userNotFound"));
+                return true;
             } catch (IOException e) {
                 e.printStackTrace();
+                player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("loginError"));
+                return true;
             }
-            player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("userNotFound"));
-            return true;
-        } else {
-            sender.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("bePlayer"));
         }
+
         return false;
     }
 

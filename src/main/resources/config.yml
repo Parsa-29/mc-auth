@@ -13,6 +13,14 @@ KickTime: 15
 # Plugin prefix
 Prefix: "§9[§bAuth§9]§c "
 
+# Database settings (MySQL)
+database:
+  host: localhost
+  port: 3306
+  name: mcgeo_auth
+  user: root
+  password: ""
+
 # Messages
 Translate:
   loginUsage: "§cUsage: /login <password>"

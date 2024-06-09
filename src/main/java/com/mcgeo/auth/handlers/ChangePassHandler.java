@@ -1,7 +1,6 @@
 package com.mcgeo.auth.handlers;
 
 import java.io.File;
-import java.util.List;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -9,19 +8,24 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.mcgeo.auth.Plugin;
-import com.mcgeo.auth.classes.User;
+import com.mcgeo.auth.db.Database;
+import com.mcgeo.auth.models.SessionHandler;
+import com.mcgeo.auth.models.User;
 import com.mcgeo.auth.utils.EncryptionUtils;
 import com.mcgeo.auth.utils.SaveUsers;
 import com.mcgeo.auth.utils.SettingsUtil;
-import com.mcgeo.auth.utils.UserList;
 
 public class ChangePassHandler implements CommandExecutor {
     Plugin plugin;
     SaveUsers saveUsers;
+    private Database database;
+    private SessionHandler sessionHandler;
 
     public ChangePassHandler(Plugin plugin) {
-        this.plugin = plugin; // Assign plugin
-        this.saveUsers = new SaveUsers(new File(plugin.getDataFolder(), "data.json"));
+        this.plugin = plugin;
+        this.database = plugin.getDatabase(); // Assign the database field
+        File dataFile = new File(plugin.getDataFolder(), "data.json");
+        this.saveUsers = new SaveUsers(dataFile, database);
     }
 
     @Override
@@ -29,7 +33,6 @@ public class ChangePassHandler implements CommandExecutor {
         if (command.getName().equalsIgnoreCase("changepass") && sender instanceof Player) {
             Player player = (Player) sender;
             String username = player.getName();
-            List<User> users;
             if (player.isOp()) {
                 if (args.length < 4) {
                     player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("changePassUsageOP"));
@@ -37,49 +40,47 @@ public class ChangePassHandler implements CommandExecutor {
                 }
 
                 // /changepass <username> <oldpassword> <newpassword> <newpassword>
+                User user = sessionHandler.getUser();
                 try {
-                    users = new UserList(plugin).readUsers();
-                    for (User user : users) {
-                        if (user.isActive()) {
-                            if (user.getUsername().equals(args[0])) {
-                                try {
-                                    String password = args[1];
-                                    String hashedPassword = EncryptionUtils.hashSHA256(password);
-                                    String password2 = args[2];
-                                    String password3 = args[3];
-                                    Object currentPassword = user.getPassword();
-                                    // check if the current password is correct
-                                    if (currentPassword.equals(hashedPassword)) {
-                                        // check if the new passwords match
-                                        if (password2.equals(password3)) {
-                                            user.setPassword(password2);
-                                            saveUsers.saveUsers(users);
-                                            player.sendMessage(SettingsUtil.PREFIX
-                                                    + SettingsUtil.TRANSLATED_STRINGS.get("passwordChanged"));
-                                            return true;
-                                        } else {
-                                            player.sendMessage(SettingsUtil.PREFIX
-                                                    + SettingsUtil.TRANSLATED_STRINGS.get("passwordsDoNotMatch"));
-                                            return true;
-                                        }
+                    if (user.isActive()) {
+                        if (user.getUsername().equals(args[0])) {
+                            try {
+                                String password = args[1];
+                                String hashedPassword = EncryptionUtils.hashSHA256(password);
+                                String password2 = args[2];
+                                String password3 = args[3];
+                                Object currentPassword = user.getPassword();
+                                // check if the current password is correct
+                                if (currentPassword.equals(hashedPassword)) {
+                                    // check if the new passwords match
+                                    if (password2.equals(password3)) {
+                                        user.setPassword(password2);
+                                        database.updateUser(user);
+                                        player.sendMessage(SettingsUtil.PREFIX
+                                                + SettingsUtil.TRANSLATED_STRINGS.get("passwordChanged"));
+                                        return true;
                                     } else {
                                         player.sendMessage(SettingsUtil.PREFIX
-                                                + SettingsUtil.TRANSLATED_STRINGS.get("incorrectPasswordChange"));
+                                                + SettingsUtil.TRANSLATED_STRINGS.get("passwordsDoNotMatch"));
                                         return true;
                                     }
-                                } catch (Exception e) {
-                                    e.printStackTrace();
+                                } else {
+                                    player.sendMessage(SettingsUtil.PREFIX
+                                            + SettingsUtil.TRANSLATED_STRINGS.get("incorrectPasswordChange"));
+                                    return true;
                                 }
-                            } else {
-                                player.sendMessage(
-                                        SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("userNotFound"));
-                                return true;
+                            } catch (Exception e) {
+                                e.printStackTrace();
                             }
                         } else {
                             player.sendMessage(
-                                    SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("notLoggedIn"));
+                                    SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("userNotFound"));
                             return true;
                         }
+                    } else {
+                        player.sendMessage(
+                                SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("notLoggedIn"));
+                        return true;
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -91,44 +92,43 @@ public class ChangePassHandler implements CommandExecutor {
                 }
 
                 try {
-                    users = new UserList(plugin).readUsers();
-                    for (User user : users) {
-                        if (user.isActive()) {
-                            if (user.getUsername().equals(username)) {
-                                try {
-                                    String password = args[0];
-                                    String hashedPassword = EncryptionUtils.hashSHA256(password);
-                                    String password2 = args[1];
-                                    String password3 = args[2];
-                                    Object currentPassword = user.getPassword();
-                                    // check if the current password is correct
-                                    if (currentPassword.equals(hashedPassword)) {
-                                        // check if the new passwords match
-                                        if (password2.equals(password3)) {
-                                            user.setPassword(password2);
-                                            saveUsers.saveUsers(users);
-                                            player.sendMessage(SettingsUtil.PREFIX
-                                                    + SettingsUtil.TRANSLATED_STRINGS.get("passwordChanged"));
-                                            return true;
-                                        } else {
-                                            player.sendMessage(SettingsUtil.PREFIX
-                                                    + SettingsUtil.TRANSLATED_STRINGS.get("passwordsDoNotMatch"));
-                                            return true;
-                                        }
+                    User user = sessionHandler.getUser();
+
+                    if (user.isActive()) {
+                        if (user.getUsername().equals(username)) {
+                            try {
+                                String password = args[0];
+                                String hashedPassword = EncryptionUtils.hashSHA256(password);
+                                String password2 = args[1];
+                                String password3 = args[2];
+                                Object currentPassword = user.getPassword();
+                                // check if the current password is correct
+                                if (currentPassword.equals(hashedPassword)) {
+                                    // check if the new passwords match
+                                    if (password2.equals(password3)) {
+                                        user.setPassword(password2);
+                                        database.updateUser(user);
+                                        player.sendMessage(SettingsUtil.PREFIX
+                                                + SettingsUtil.TRANSLATED_STRINGS.get("passwordChanged"));
+                                        return true;
                                     } else {
                                         player.sendMessage(SettingsUtil.PREFIX
-                                                + SettingsUtil.TRANSLATED_STRINGS.get("incorrectPasswordChange"));
+                                                + SettingsUtil.TRANSLATED_STRINGS.get("passwordsDoNotMatch"));
                                         return true;
                                     }
-                                } catch (Exception e) {
-                                    e.printStackTrace();
+                                } else {
+                                    player.sendMessage(SettingsUtil.PREFIX
+                                            + SettingsUtil.TRANSLATED_STRINGS.get("incorrectPasswordChange"));
+                                    return true;
                                 }
+                            } catch (Exception e) {
+                                e.printStackTrace();
                             }
-                        } else {
-                            player.sendMessage(
-                                    SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("notLoggedIn"));
-                            return true;
                         }
+                    } else {
+                        player.sendMessage(
+                                SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("notLoggedIn"));
+                        return true;
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

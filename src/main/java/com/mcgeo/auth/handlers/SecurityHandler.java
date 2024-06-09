@@ -6,21 +6,27 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.mcgeo.auth.Plugin;
-import com.mcgeo.auth.classes.User;
+import com.mcgeo.auth.db.Database;
+import com.mcgeo.auth.models.SessionHandler;
+import com.mcgeo.auth.models.User;
 import com.mcgeo.auth.utils.SaveUsers;
 import com.mcgeo.auth.utils.SettingsUtil;
-import com.mcgeo.auth.utils.UserList;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 
 public class SecurityHandler implements CommandExecutor {
     private Plugin plugin;
     SaveUsers saveUsers;
+    private Database database;
+    private SessionHandler sessionHandler;
+
     public SecurityHandler(Plugin plugin) {
-        this.plugin = plugin; // Assign plugin
-        this.saveUsers = new SaveUsers(new File(plugin.getDataFolder(), "data.json"));
+        this.plugin = plugin;
+        this.database = plugin.getDatabase(); // Assign the database field
+        File dataFile = new File(plugin.getDataFolder(), "data.json");
+        this.saveUsers = new SaveUsers(dataFile, database);
+
     }
 
     @Override
@@ -33,35 +39,26 @@ public class SecurityHandler implements CommandExecutor {
             }
 
             String option = args[0];
-            try {
-                List<User> users = new UserList(plugin).readUsers();
-
-                for (User user : users) {
-                    if (user.getUsername().equals(player.getName())) {
-                        if (option.equalsIgnoreCase("on")) {
-                            user.setSecurity(true);
-                            player.sendMessage(
-                                    SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("securityEnabled"));
-                        } else if (option.equalsIgnoreCase("off")) {
-                            user.setSecurity(false);
-                            player.sendMessage(
-                                    SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("securityDisabled"));
-                        } else {
-                            player.sendMessage(
-                                    SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("securityUsage"));
-                            return true;
-                        }
-
-                        saveUsers.saveUsers(users);
-                        return true;
-                    }
+            User user = sessionHandler.getUser();
+            if (user.getUsername().equals(player.getName())) {
+                if (option.equalsIgnoreCase("on")) {
+                    user.setSecurity(true);
+                    player.sendMessage(
+                            SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("securityEnabled"));
+                } else if (option.equalsIgnoreCase("off")) {
+                    user.setSecurity(false);
+                    player.sendMessage(
+                            SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("securityDisabled"));
+                } else {
+                    player.sendMessage(
+                            SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("securityUsage"));
+                    return true;
                 }
 
-                player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("userNotFound"));
-            } catch (IOException e) {
-                e.printStackTrace();
-                player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("errorOccurred"));
+                database.updateUser(user);
+                return true;
             }
+            player.sendMessage(SettingsUtil.PREFIX + SettingsUtil.TRANSLATED_STRINGS.get("userNotFound"));
             return true;
         }
         return false;

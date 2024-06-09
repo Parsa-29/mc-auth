@@ -15,7 +15,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.mcgeo.auth.Plugin;
-import com.mcgeo.auth.classes.User;
+import com.mcgeo.auth.db.Database;
+import com.mcgeo.auth.models.User;
 import com.mcgeo.auth.utils.EncryptionUtils;
 import com.mcgeo.auth.utils.SaveUsers;
 import com.mcgeo.auth.utils.SettingsUtil;
@@ -25,11 +26,15 @@ public class RegisterHandler implements CommandExecutor {
     private File dataFile;
     Plugin plugin;
     SaveUsers saveUsers;
+    private UserList userList;
 
     public RegisterHandler(Plugin plugin) {
         this.plugin = plugin; // Assign plugin
-        this.dataFile = new File(plugin.getDataFolder(), "data.json");
-        this.saveUsers = new SaveUsers(new File(plugin.getDataFolder(), "data.json"));
+        Database database = plugin.getDatabase(); // Ensure this method exists in your Plugin class
+        this.dataFile = new File(plugin.getDataFolder(), "data.json"); // Initialize class-level dataFile variable
+        this.saveUsers = new SaveUsers(dataFile, database);
+        this.userList = new UserList(plugin, database); // Updated to match constructor
+
     }
 
     @Override
@@ -64,7 +69,7 @@ public class RegisterHandler implements CommandExecutor {
                 }
 
                 // Read existing users
-                List<User> users = new UserList(plugin).readUsers();
+                List<User> users = userList.readUsers();
 
                 // Check if user already exists
                 if (userExistsForRegister(player.getName())) {
@@ -122,7 +127,7 @@ public class RegisterHandler implements CommandExecutor {
     private boolean userExistsForRegister(String username) {
         List<User> users = null;
         try {
-            users = new UserList(plugin).readUsers();
+            users = userList.readUsers();
         } catch (IOException e) {
             e.printStackTrace();
         }
